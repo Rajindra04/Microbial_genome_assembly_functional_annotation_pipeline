@@ -1,0 +1,8 @@
+argparse
+staramr
+bioservices
+matplotlib
+pandas
+seaborn
+xlsxwriter
+matplotlib-venn
