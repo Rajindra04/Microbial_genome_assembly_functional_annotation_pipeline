@@ -132,33 +132,52 @@ python main.py --pipeline all \
 
 The pipeline generates the following output structure in the specified `--output` directory:
 ```
-output_dir/
-├── bins/                       # Metagenomic bins (bin*.fa)
-├── kraken2_output/             # Kraken2 taxonomic classification results
-├── spades_output/              # SPAdes assembly results (contigs.fasta)
-├── *.fastq                    # Segregated FASTQ files (e.g., Escherichia_coli_R*.fastq)
+ooutput_dir/
+├── bins/
+│   ├── bin1/
+│   │   ├── bin1.fa
+│   │   ├── Lactiplantibacillus_plantarum_R1.fastq
+│   │   ├── Lactiplantibacillus_plantarum_R2.fastq
+│   ├── bin2/
+│   │   ├── bin2.fa
+│   │   ├── Salmonella_enterica_R1.fastq
+│   │   ├── Salmonella_enterica_R2.fastq
+│   └── ...
+├── kraken2_output/
+│   ├── bin1_kraken2_output.txt
+│   ├── bin1_kraken2_report.txt
+│   ├── bin2_kraken2_output.txt
+│   ├── bin2_kraken2_report.txt
+│   └── ...
+├── spades_output/
+│   ├── contigs.fasta
 ├── genomic/
-│   ├── organism1/             # Genomic pipeline results for organism1
-│   │   ├── organism1.annotations.txt
-│   │   ├── organism1.consensus.fasta
-│   │   ├── organism1.filtered.vcf
+│   ├── bin1_Lactiplantibacillus_plantarum/
+│   │   ├── bin1_Lactiplantibacillus_plantarum.annotations.txt
+│   │   ├── bin1_Lactiplantibacillus_plantarum.consensus.fasta
+│   │   ├── bin1_Lactiplantibacillus_plantarum.filtered.vcf
 │   │   ├── prokka/
-│   │   └── ...
-│   ├── organism2/
+│   │   │   ├── Lactiplantibacillus_plantarum.faa
+│   │   │   ├── Lactiplantibacillus_plantarum.gff
+│   ├── bin2_Salmonella_enterica/
 │   └── ...
 ├── visualizations/
-│   ├── organism1/             # Visualization results for organism1
+│   ├── bin1_Lactiplantibacillus_plantarum/
 │   │   ├── cog_distribution.png
 │   │   ├── top_pathways.png
 │   │   ├── pathway_heatmap.png
 │   │   ├── pathway_overlap.png
-│   │   └── analysis_results.xlsx
-│   ├── organism2/
+│   │   ├── analysis_results.xlsx
+│   ├── bin2_Salmonella_enterica/
 │   └── ...
-├── fastp.html                 # Fastp quality control report
+├── clean_R1.fastq
+├── clean_R2.fastq
+├── fastp.html
 ├── fastp.json
-└── pipeline.log               # Pipeline execution log
-```
+├── aligned.bam
+├── depth.txt
+├── mapped.bam
+└── pipeline.log```
 
 ## Dependencies
 
