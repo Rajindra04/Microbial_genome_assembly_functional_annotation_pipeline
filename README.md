@@ -1,44 +1,60 @@
-# Metagenomics Analysis Pipeline
+# Metagenomics and Genomic Analysis Pipeline
 
-This repository contains a comprehensive pipeline for metagenomics analysis, variant calling, and visualization of genomic annotations. The pipeline integrates three main components:
-
-1. **Metagenomics Pipeline**: Processes paired-end FASTQ files to perform quality control, de novo assembly, binning, taxonomic classification, and antimicrobial resistance (AMR) detection.
-2. **Genomic Pipeline**: Performs variant calling and functional annotation on segregated FASTQ files from the metagenomics pipeline.
-3. **Visualization Pipeline**: Generates visualizations of functional annotations, including COG category distributions, metabolic pathway analyses, and gene-pathway associations.
+This pipeline performs metagenomic and genomic analysis on paired-end FASTQ files, processing them through quality control, de novo assembly, binning, taxonomic classification, and functional annotation. It is designed for metagenomic datasets, producing bin-specific FASTQ files and annotations, followed by genomic analysis and visualization for each bin.
 
 ## Table of Contents
-
-- [Features](#features)
-- [Requirements](#requirements)
+- [Overview](#overview)
 - [Installation](#installation)
+  - [Prerequisites](#prerequisites)
+  - [Setup Instructions](#setup-instructions)
 - [Usage](#usage)
-  - [Running the Full Pipeline](#running-the-full-pipeline)
-  - [Running Individual Pipelines](#running-individual-pipelines)
+  - [Workflow](#workflow)
+  - [Running the Metagenomics Pipeline](#running-the-metagenomics-pipeline)
+  - [Running the Genomic Pipeline](#running-the-genomic-pipeline)
+  - [Running the Visualization Pipeline](#running-the-visualization-pipeline)
+  - [Example Commands](#example-commands)
 - [Directory Structure](#directory-structure)
 - [Dependencies](#dependencies)
+- [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
 - [License](#license)
 
-## Features
+## Overview
 
-- **Quality Control**: Uses `fastp` to clean paired-end FASTQ files.
-- **De Novo Assembly**: Assembles contigs using `SPAdes` in metagenomic mode.
-- **Binning**: Groups contigs into bins using `MetaBAT2`.
-- **Taxonomic Classification**: Assigns taxonomy to bins using `Kraken2`.
-- **AMR and Virulence Detection**: Identifies AMR, virulence, and plasmid genes with `ABRicate`.
-- **Variant Calling**: Maps reads to a reference genome, calls variants with `bcftools`, and annotates with `SnpEff`.
-- **Functional Annotation**: Annotates genes with `Prokka` and `eggNOG-mapper`.
-- **Visualization**: Generates plots for COG distributions, pathway analyses, and gene-pathway associations using `matplotlib` and `seaborn`.
-- **Resume Capability**: Supports resuming from completed steps to avoid redundant processing.
-- **Modular Design**: Allows running individual pipelines (metagenomics, genomic, visualization) or the full workflow.
+The pipeline consists of three main components:
+1. **Metagenomics Pipeline** (`metagenomics_pipeline.py`): Processes paired-end FASTQ files through quality control (fastp), de novo assembly (SPAdes), binning (MetaBAT2), taxonomic classification (Kraken2), and AMR/virulence/plasmid detection (ABRicate). It segregates reads into bin-specific FASTQ files based on taxonomic assignments.
+2. **Genomic Pipeline** (`genomic_pipeline.py`): Performs variant calling, annotation (Prokka, eggNOG-mapper, SnpEff), and functional analysis on bin-specific FASTQ files, requiring organism-specific reference genomes.
+3. **Visualization Pipeline** (`visualize.py`): Generates visualizations (e.g., COG distribution, pathway heatmaps) from genomic annotations.
 
-## Requirements
+The pipeline is orchestrated by `main.py`, which supports three modes: `metagenomics`, `genomic`, and `visualize`. The `metagenomics` mode must be run first, followed by `genomic` and `visualize` for each bin, with appropriate reference genomes specified for the `genomic` mode.
 
-- **Operating System**: Linux or macOS (Windows not supported due to dependency compatibility).
-- **Conda**: Required for environment management.
-- **Kraken2 Database**: Must be specified via `--db_path` or the `KRAKEN2_DB_PATH` environment variable.
-- **Reference Files**: Required for the genomic pipeline (`reference.fasta` and `reference.gbk` in `--ref_dir`).
+## Installation
 
+### Prerequisites
+- **Operating System**: Linux or macOS (Windows may require WSL2).
+- **Python**: Version 3.8 or higher.
+- **Dependencies**:
+  - **Bioinformatics Tools**:
+    - `fastp` (v0.23.2+): For quality control.
+    - `spades.py` (SPAdes v3.15.5+): For de novo assembly.
+    - `minimap2` (v2.24+): For read mapping.
+    - `samtools` (v1.15+): For BAM file processing.
+    - `metabat2` (v2.15+): For binning.
+    - `jgi_summarize_bam_contig_depths` (MetaBAT2 suite): For depth calculation.
+    - `kraken2` (v2.1.2+): For taxonomic classification.
+    - `abricate` (v1.0.1+): For AMR/virulence/plasmid detection.
+    - `prokka` (v1.14.6+): For genome annotation.
+    - `diamond` (v2.0.15+): For eggNOG-mapper.
+    - `snpEff` (v5.0+): For variant annotation.
+  - **Python Packages**:
+    - `biopython` (v1.79+): For FASTQ parsing.
+- **Databases**:
+  - **Kraken2 Database**: A Kraken2 database (e.g., MiniKraken, Standard, or PlusPFP) for taxonomic classification.
+  - **eggNOG Database**: Required for functional annotation in `eggnog-mapper`.
+  - **Reference Genomes**: Organism-specific `reference.fasta` and `reference.gbk` files for each bin.
+  - **SnpEff Database**: Organism-specific SnpEff database for variant annotation.
+
+### Setup Instructions
 ## Installation
 
 1. **Clone the Repository**:
@@ -60,79 +76,164 @@ This repository contains a comprehensive pipeline for metagenomics analysis, var
    conda activate metagenomics_pipeline
    ```
 
-4. **Set Up Kraken2 Database** (if not already available):
+4. **Set Up Kraken2 Database**:
    - Specify the path to an existing Kraken2 database via the `KRAKEN2_DB_PATH` environment variable:
      ```bash
      export KRAKEN2_DB_PATH=/path/to/kraken2/database
      ```
-   - Alternatively, the pipeline can download the MiniKraken2 database automatically if not found (requires internet access).
+   - Alternatively, provide the `--db_path` argument when running the pipeline:
+     ```bash
+     python main.py --pipeline all --db_path /path/to/kraken2/database ...
+     ```
+   - If no database is found, the pipeline will attempt to download the MiniKraken2 database (requires internet access).
+
+5. **Set Up eggNOG Database**:
+   - Download the eggNOG 5.0 database for `eggnog-mapper`:
+     ```bash
+     export EGGNOG_DATA_DIR=/path/to/eggnog_db
+     mkdir -p $EGGNOG_DATA_DIR
+     wget -P $EGGNOG_DATA_DIR http://eggnog5.embl.de/download/eggnog_5.0/eggnog.db.gz
+     gunzip $EGGNOG_DATA_DIR/eggnog.db.gz
+     ```
+   - Alternatively, use `eggnog-mapper`’s built-in download command:
+     ```bash
+     download_eggnog_data.py -y -P $EGGNOG_DATA_DIR
+     ```
+   - Ensure `EGGNOG_DATA_DIR` is set or configure `eggnog-mapper` to use the database path:
+     ```bash
+     export EGGNOG_DATA_DIR=/path/to/eggnog_db
+     ```
+
+6. **Prepare Reference Genomes**:
+   - Create a directory for each organism (e.g., `ref_dir_Lactiplantibacillus_plantarum/`) containing `reference.fasta` and `reference.gbk`.
+   - Example:
+     ```
+     ref_dir_Lactiplantibacillus_plantarum/
+     ├── reference.fasta
+     ├── reference.gbk
+     ref_dir_Salmonella_enterica/
+     ├── reference.fasta
+     ├── reference.gbk
+     ```
+
+7. **Set Up SnpEff Database**:
+   - Configure organism-specific SnpEff databases (refer to SnpEff documentation).
 
 ## Usage
 
-The pipeline is controlled via `main.py`, which allows running the full pipeline or individual components.
+### Workflow
+1. **Run Metagenomics Pipeline**:
+   - Processes input FASTQ files to generate bin-specific FASTQ files and Kraken2 taxonomic outputs.
+   - Outputs are stored in `output_dir/bins/` and `output_dir/kraken2_output/`.
+   - Check `pipeline.log` for bin-specific taxonomic assignments to identify appropriate reference genomes.
 
-### Running the Full Pipeline
+2. **Run Genomic Pipeline**:
+   - Run for each bin separately, specifying a bin ID and organism-specific reference directory.
+   - Outputs are stored in `output_dir/genomic/binID_organism/`.
 
-To run the entire pipeline (metagenomics, genomic, and visualization):
+3. **Run Visualization Pipeline**:
+   - Run for a specific bin or all bins to generate visualizations from genomic annotations.
+   - Outputs are stored in `output_dir/visualizations/binID_organism/`.
+
+### Running the Metagenomics Pipeline
 ```bash
-python main.py --pipeline all \
+python main.py --pipeline metagenomics \
     --fastq1 input_R1.fastq \
     --fastq2 input_R2.fastq \
     --output output_dir \
-    --ref_dir ref_dir \
-    --snpeff_db mydb \
+    --db_path /path/to/kraken2/database \
     --threads 8 \
     --resume
 ```
+- **Required Arguments**:
+  - `--fastq1`, `--fastq2`: Paired-end FASTQ files.
+  - `--output`: Output directory.
+  - `--db_path`: Path to Kraken2 database (or set `KRAKEN2_DB_PATH` environment variable).
+- **Optional Arguments**:
+  - `--threads`: Number of CPU threads (default: 8).
+  - `--resume`: Skip completed steps if outputs exist.
 
-**Arguments**:
-- `--pipeline all`: Runs all pipelines sequentially.
-- `--fastq1` and `--fastq2`: Paths to paired-end FASTQ files.
-- `--output`: Output directory for results.
-- `--ref_dir`: Directory containing `reference.fasta` and `reference.gbk`.
-- `--snpeff_db`: SnpEff database name.
-- `--threads`: Number of CPU threads (default: 8).
-- `--resume`: Resume from completed steps.
-- `--db_path`: Path to Kraken2 database (optional, overrides `KRAKEN2_DB_PATH`).
-- `--organism`: Organism code for KEGG (default: `eco`).
-- `--keep-temp`: Keep temporary files.
-- `--dry-run`: Print commands without executing.
-- `--verbose`: Enable verbose logging.
-- `--skip-emapper`: Skip eggNOG-mapper if the database is unavailable.
+### Running the Genomic Pipeline
+Run for each bin with the appropriate reference directory:
+```bash
+python main.py --pipeline genomic \
+    --bin_id bin1 \
+    --ref_dir ref_dir_Lactiplantibacillus_plantarum \
+    --snpeff_db lactiplantibacillus_plantarum_db \
+    --output output_dir \
+    --threads 8 \
+    --resume
+```
+- **Required Arguments**:
+  - `--bin_id`: Bin ID (e.g., `bin1`).
+  - `--ref_dir`: Directory containing `reference.fasta` and `reference.gbk`.
+  - `--snpeff_db`: SnpEff database name.
+  - `--output`: Output directory (same as metagenomics pipeline).
+- **Optional Arguments**:
+  - `--threads`, `--resume`, `--keep-temp`, `--dry-run`, `--verbose`, `--skip-emapper`, `--organism`.
 
-### Running Individual Pipelines
+### Running the Visualization Pipeline
+Run for a specific bin or all bins:
+```bash
+python main.py --pipeline visualize \
+    --bin_id bin1 \
+    --output output_dir
+```
+- **Required Arguments**:
+  - `--output`: Output directory.
+- **Optional Arguments**:
+  - `--bin_id`: Bin ID to process a single bin (omit to process all genomic outputs).
 
-- **Metagenomics Pipeline**:
-  ```bash
-  python main.py --pipeline metagenomics \
-      --fastq1 input_R1.fastq \
-      --fastq2 input_R2.fastq \
-      --output output_dir \
-      --threads 8 \
-      --resume
-  ```
+### Example Commands
+1. **Metagenomics Pipeline**:
+   ```bash
+   python main.py --pipeline metagenomics \
+       --fastq1 input_R1.fastq \
+       --fastq2 input_R2.fastq \
+       --output output_dir \
+       --db_path /path/to/kraken2_db \
+       --threads 8 \
+       --resume
+   ```
 
-- **Genomic Pipeline** (uses segregated FASTQ files from metagenomics output):
-  ```bash
-  python main.py --pipeline genomic \
-      --output output_dir \
-      --ref_dir ref_dir \
-      --snpeff_db mydb \
-      --threads 8 \
-      --resume
-  ```
+2. **Genomic Pipeline for bin1**:
+   ```bash
+   python main.py --pipeline genomic \
+       --bin_id bin1 \
+       --ref_dir ref_dir_Lactiplantibacillus_plantarum \
+       --snpeff_db lactiplantibacillus_plantarum_db \
+       --output output_dir \
+       --threads 8 \
+       --resume
+   ```
 
-- **Visualization Pipeline** (uses annotation files from genomic output):
-  ```bash
-  python main.py --pipeline visualize \
-      --output output_dir
-  ```
+3. **Genomic Pipeline for bin2**:
+   ```bash
+   python main.py --pipeline genomic \
+       --bin_id bin2 \
+       --ref_dir ref_dir_Salmonella_enterica \
+       --snpeff_db salmonella_enterica_db \
+       --output output_dir \
+       --threads 8 \
+       --resume
+   ```
+
+4. **Visualization for bin1**:
+   ```bash
+   python main.py --pipeline visualize \
+       --bin_id bin1 \
+       --output output_dir
+   ```
+
+5. **Visualization for all bins**:
+   ```bash
+   python main.py --pipeline visualize \
+       --output output_dir
+   ```
 
 ## Directory Structure
-
-The pipeline generates the following output structure in the specified `--output` directory:
 ```
-ooutput_dir/
+output_dir/
 ├── bins/
 │   ├── bin1/
 │   │   ├── bin1.fa
@@ -177,53 +278,52 @@ ooutput_dir/
 ├── aligned.bam
 ├── depth.txt
 ├── mapped.bam
-└── pipeline.log```
+└── pipeline.log
+```
 
 ## Dependencies
+- **Python Packages**: `biopython`
+- **Bioinformatics Tools**: `fastp`, `spades.py`, `minimap2`, `samtools`, `metabat2`, `jgi_summarize_bam_contig_depths`, `kraken2`, `abricate`, `prokka`, `diamond`, `snpEff`
+- **Databases**: Kraken2 database, eggNOG 5.0 database, organism-specific reference genomes, SnpEff databases
 
-The pipeline relies on the following tools and libraries, managed via `environment.yml`:
+## Troubleshooting
+1. **Kraken2 Database Issues**:
+   - Ensure `KRAKEN2_DB_PATH` or `--db_path` points to a valid Kraken2 database.
+   - Use a comprehensive database (e.g., Standard or PlusPFP) for better taxonomic resolution:
+     ```bash
+     export KRAKEN2_DB_PATH=/path/to/standard_kraken2_db
+     ```
 
-- **Bioconda Tools**:
-  - fastp (0.23.4)
-  - spades (4.0.0)
-  - minimap2 (2.28)
-  - samtools (1.21)
-  - metabat2 (2.15)
-  - kraken2 (2.1.3)
-  - abricate (1.0.0)
-  - bowtie2 (2.5.4)
-  - bcftools (1.16)
-  - snpeff (5.1)
-  - prokka (1.14.6)
-  - eggnog-mapper (2.1.9)
+2. **eggNOG Database Issues**:
+   - Verify that `EGGNOG_DATA_DIR` is set and contains the eggNOG database:
+     ```bash
+     ls -l $EGGNOG_DATA_DIR/eggnog.db
+     ```
+   - If `eggnog-mapper` fails, try downloading the database again or use `--skip-emapper`.
 
-- **Python Libraries** (via pip):
-  - argparse
-  - staramr
-  - bioservices
-  - matplotlib
-  - pandas
-  - seaborn
-  - xlsxwriter
-  - matplotlib-venn
+3. **Reference Genome Errors**:
+   - Verify that `--ref_dir` contains `reference.fasta` and `reference.gbk`:
+     ```bash
+     ls -l ref_dir_Lactiplantibacillus_plantarum/
+     ```
+   - Check `pipeline.log` for bin-specific taxa to select appropriate references.
 
-- **Other**:
-  - r-base (4.2.3)
-  - rpy2 (3.5.11)
+4. **Empty FASTQ Files**:
+   - Check `bins/binID/` for empty FASTQ files:
+     ```bash
+     find output_dir/bins -name "*_R1.fastq" -empty
+     ```
+   - If empty, verify Kraken2 outputs and read mapping:
+     ```bash
+     cat output_dir/kraken2_output/bin1_kraken2_output.txt | grep '^C' | cut -f 3 | sort | uniq
+     ```
 
-See `environment.yml` for the complete list.
+5. **General Debugging**:
+   - Review `pipeline.log` and `metagenomics_pipeline.log` for errors.
+   - Use `--verbose` for detailed output and `--dry-run` to preview commands.
 
 ## Contributing
-
-Contributions are welcome! Please follow these steps:
-1. Fork the repository.
-2. Create a new branch (`git checkout -b feature/your-feature`).
-3. Commit your changes (`git commit -m 'Add your feature'`).
-4. Push to the branch (`git push origin feature/your-feature`).
-5. Open a pull request.
-
-Please ensure your code follows the existing style and includes appropriate tests.
+Contributions are welcome! Please submit a pull request or open an issue on the repository for bugs, feature requests, or improvements.
 
 ## License
-
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License. See the `LICENSE` file for details.
