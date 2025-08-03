@@ -135,7 +135,7 @@ graph TD
     end
 
     H --> I{Check pipeline.log for Taxa}
-    I -->|Identify bins and taxa| J{For each bin\n(e.g., bin1, bin2)}
+    I -->|Check taxa| J{For each bin\nbin1, bin2, ...}
     J -->|Select reference genome| K[Genomic Pipeline: bin1\n--ref_dir ref_dir_organism1]
 
     subgraph Genomic Pipeline: bin1
