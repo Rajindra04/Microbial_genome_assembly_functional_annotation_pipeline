@@ -119,6 +119,50 @@ The pipeline is orchestrated by `main.py`, which supports three modes: `metageno
 7. **Set Up SnpEff Database**:
    - Configure organism-specific SnpEff databases (refer to SnpEff documentation).
 
+
+### Workflow Diagram
+```mermaid
+graph TD
+    A[Start: Paired-end FASTQ Files] -->|main.py --pipeline metagenomics| B[Metagenomics Pipeline]
+
+    subgraph Metagenomics Pipeline
+        B --> C[Quality Control: fastp\nclean_R1.fastq, clean_R2.fastq]
+        C --> D[De Novo Assembly: SPAdes\ncontigs.fasta]
+        D --> E[Binning: MetaBAT2\nbins/bin1.fa, bin2.fa, ...]
+        E --> F[Taxonomic Classification: Kraken2\nbin1_kraken2_output.txt, ...]
+        F --> G[AMR/Virulence/Plasmid Detection: ABRicate\ncard_summary.tsv, ...]
+        F --> H[Segregate FASTQ by Bin/Taxa\nbins/bin1/organism_R1.fastq, ...]
+    end
+
+    H --> I{Check pipeline.log for Taxa}
+    I -->|Identify bins and taxa| J{For each bin\n(e.g., bin1, bin2)}
+    J -->|Select reference genome| K[Genomic Pipeline: bin1\n--ref_dir ref_dir_organism1]
+
+    subgraph Genomic Pipeline: bin1
+        K --> L[Variant Calling\nconsensus.fasta, filtered.vcf]
+        L --> M[Annotation: Prokka, eggNOG-mapper, SnpEff\norganism.faa, .gff, annotations.txt]
+    end
+
+    J -->|Select reference genome| N[Genomic Pipeline: bin2\n--ref_dir ref_dir_organism2]
+
+    subgraph Genomic Pipeline: bin2
+        N --> O[Variant Calling\nconsensus.fasta, filtered.vcf]
+        O --> P[Annotation: Prokka, eggNOG-mapper, SnpEff\norganism.faa, .gff, annotations.txt]
+    end
+
+    K --> Q[Visualization Pipeline: bin1\nVisualizations for bin1]
+    N --> R[Visualization Pipeline: bin2\nVisualizations for bin2]
+    J -->|Optional: All bins| S[Visualization Pipeline: All bins\nVisualizations for all bins]
+
+    subgraph Visualization Pipeline
+        Q --> T[Generate Plots: COG distribution, pathway heatmaps\ncog_distribution.png, ...]
+        R --> T
+        S --> T
+    end
+
+    T --> U[End: Output Files\ngenomic/binID_organism/, visualizations/binID_organism/]
+```
+
 ## Usage
 
 ### Workflow
