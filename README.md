@@ -208,6 +208,8 @@ python main.py --pipeline genomic \
     --threads 8 \
     --resume
 ```
+note: --output should be same as output_dir in metagenomic_pipeline
+
 - **Required Arguments**:
   - `--bin_id`: Bin ID (e.g., `bin1`).
   - `--ref_dir`: Directory containing `reference.fasta` and `reference.gbk`.
