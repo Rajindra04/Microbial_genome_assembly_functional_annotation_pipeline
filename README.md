@@ -201,7 +201,7 @@ python main.py --pipeline metagenomics \
 Run for each bin with the appropriate reference directory:
 ```bash
 python main.py --pipeline genomic \
-    --bin_id bin1 \
+    --bin_id bin.1 \
     --ref_dir ref_dir_Lactiplantibacillus_plantarum \
     --snpeff_db lactiplantibacillus_plantarum_db \
     --output output_dir \
@@ -211,7 +211,7 @@ python main.py --pipeline genomic \
 note: --output should be same as output_dir in metagenomic_pipeline
 
 - **Required Arguments**:
-  - `--bin_id`: Bin ID (e.g., `bin1`).
+  - `--bin_id`: Bin ID (e.g., `bin.1`).
   - `--ref_dir`: Directory containing `reference.fasta` and `reference.gbk`.
   - `--snpeff_db`: SnpEff database name.
   - `--output`: Output directory (same as metagenomics pipeline).
@@ -245,7 +245,7 @@ python main.py --pipeline visualize \
 2. **Genomic Pipeline for bin1**:
    ```bash
    python main.py --pipeline genomic \
-       --bin_id bin1 \
+       --bin_id bin.1 \
        --ref_dir ref_dir_Lactiplantibacillus_plantarum \
        --snpeff_db lactiplantibacillus_plantarum_db \
        --output output_dir \
@@ -267,7 +267,7 @@ python main.py --pipeline visualize \
 4. **Visualization for bin1**:
    ```bash
    python main.py --pipeline visualize \
-       --bin_id bin1 \
+       --bin_id bin.1 \
        --output output_dir
    ```
 
@@ -282,11 +282,11 @@ python main.py --pipeline visualize \
 output_dir/
 ├── bins/
 │   ├── bin1/
-│   │   ├── bin1.fa
+│   │   ├── bin.1.fa
 │   │   ├── Lactiplantibacillus_plantarum_R1.fastq
 │   │   ├── Lactiplantibacillus_plantarum_R2.fastq
 │   ├── bin2/
-│   │   ├── bin2.fa
+│   │   ├── bin.2.fa
 │   │   ├── Salmonella_enterica_R1.fastq
 │   │   ├── Salmonella_enterica_R2.fastq
 │   └── ...
