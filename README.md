@@ -59,7 +59,7 @@ The pipeline is orchestrated by `main.py`, which supports three modes: `metageno
 
 1. **Clone the Repository**:
    ```bash
-   git clone https://github.com/yourusername/metagenomics_analysis.git
+   git clone https://github.com/Rajindra04/metagenomics_analysis.git
    cd metagenomics_analysis
    ```
 
