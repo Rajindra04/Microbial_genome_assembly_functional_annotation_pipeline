@@ -97,7 +97,7 @@ The pipeline is orchestrated by `main.py`, which supports three modes: `metageno
      ```
    - Alternatively, use `eggnog-mapper`’s built-in download command:
      ```bash
-     download_eggnog_data.py -y -P $EGGNOG_DATA_DIR
+     download_eggnog_data.py -y --data_dir eggnog_db
      ```
    - Ensure `EGGNOG_DATA_DIR` is set or configure `eggnog-mapper` to use the database path:
      ```bash
