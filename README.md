@@ -60,7 +60,7 @@ The pipeline is orchestrated by `main.py`, which supports three modes: `metageno
 1. **Clone the Repository**:
    ```bash
    git clone https://github.com/Rajindra04/Microbial_genome_assembly_functional_annotation_pipeline.git
-   cd metagenomics_analysis
+   cd Microbial_genome_assembly_functional_annotation_pipeline
    ```
 
 2. **Set Up the Conda Environment**:
