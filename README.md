@@ -209,6 +209,8 @@ python main.py --pipeline genomic \
     --resume
 ```
 note: --output should be same as output_dir in metagenomic_pipeline
+Reference sequence ID in fasta file and GBK should be same, check for xxx.1 where .1 is the version- delete the version in fasta file header
+name the files referene.fasta and reference.gbk in its respective folders.
 
 - **Required Arguments**:
   - `--bin_id`: Bin ID (e.g., `bin.1`).
