@@ -94,14 +94,14 @@ The pipeline is orchestrated by `main.py`, which supports three modes: `metageno
      mkdir -p $EGGNOG_DATA_DIR
      # Download the main database files
       wget -c http://eggnog5.embl.de/download/emapperdb-5.0.2/eggnog.db.gz
-        wget -c http://eggnog5.embl.de/download/emapperdb-5.0.2/eggnog_proteins.dmnd.gz
-    wget -c http://eggnog5.embl.de/download/emapperdb-5.0.2/eggnog.taxa.tar.gz
+      wget -c http://eggnog5.embl.de/download/emapperdb-5.0.2/eggnog_proteins.dmnd.gz
+      wget -c http://eggnog5.embl.de/download/emapperdb-5.0.2/eggnog.taxa.tar.gz
 
- # Decompress the files
-    gunzip eggnog.db.gz
-    gunzip eggnog_proteins.dmnd.gz
-    tar -xvzf eggnog.taxa.tar.gz
-     ```
+     Decompress the files
+      gunzip eggnog.db.gz
+     gunzip eggnog_proteins.dmnd.gz
+      tar -xvzf eggnog.taxa.tar.gz
+      ```
    - Alternatively, use `eggnog-mapper`’s built-in download command:
      ```bash
      download_eggnog_data.py -y --data_dir eggnog_db
