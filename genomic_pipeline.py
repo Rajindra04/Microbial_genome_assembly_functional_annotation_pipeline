@@ -129,13 +129,10 @@ def validate_fasta_genbank_match(genbank_file, reference_fasta):
 
 def check_download_eggnog_database():
     """Check for eggNOG DIAMOND database and download using download_eggnog_data.py if missing."""
-    # Determine eggNOG data directory: use EGGNOG_DATA_DIR or default to eggnog-mapper's data/ directory
     eggnog_data_dir = os.environ.get("EGGNOG_DATA_DIR")
     if not eggnog_data_dir:
-        # Default to eggnog-mapper's data/ directory in Conda environment
         eggnog_data_dir = os.path.join(os.environ.get("CONDA_PREFIX", ""), "lib", "python3.10", "site-packages", "data")
         if not os.path.exists(eggnog_data_dir):
-            # If data/ directory doesn't exist, try eggnog-mapper's root data/ directory
             eggnog_mapper_dir = os.path.join(os.environ.get("CONDA_PREFIX", ""), "lib", "python3.10", "site-packages", "eggnogmapper")
             eggnog_data_dir = os.path.join(eggnog_mapper_dir, "data")
     
@@ -386,6 +383,8 @@ def main():
     consensus = os.path.join(args.output_dir, f"{sample}.consensus.fasta")
     filtered_vcf = os.path.join(args.output_dir, f"{sample}.filtered.vcf.gz")
     annotated_vcf = os.path.join(args.output_dir, f"{sample}.annotated.vcf")
+    snpeff_summary_html = os.path.join(args.output_dir, f"{sample}_snpEff_summary.html")
+    snpeff_summary_csv = os.path.join(args.output_dir, f"{sample}_snpEff_summary.csv")
     prokka_dir = os.path.join(args.output_dir, "prokka")
     emapper_out = os.path.join(args.output_dir, sample)
     annot_file = os.path.join(args.output_dir, f"{sample}.annotations.txt")
@@ -412,7 +411,22 @@ def main():
         ("index_vcf", ["bcftools", "index", vcf], "Index VCF", None, None, None, False),
         ("make_consensus", ["bcftools", "consensus", "-f", reference, vcf, "-o", consensus], "Create consensus", consensus, None, None, False),
         ("filter_vcf", ["bcftools", "filter", "-i", "QUAL>20 && DP>10", vcf, "-Oz", "-o", filtered_vcf], "Filter VCF", filtered_vcf, None, None, True),
-        ("annotate_snpeff", ["snpEff", "-v", args.snpeff_db, "-c", snpeff_config, "-dataDir", snpeff_data_dir, filtered_vcf], f"Annotate VCF > {annotated_vcf}", annotated_vcf, None, None, False),
+        (
+            "annotate_snpeff",
+            [
+                "snpEff", "-Xmx4g", "-v", args.snpeff_db,
+                "-c", snpeff_config,
+                "-dataDir", snpeff_data_dir,
+                "-s", snpeff_summary_html,
+                "-csvStats", snpeff_summary_csv,
+                filtered_vcf
+            ],
+            f"Annotate variants with SnpEff → {annotated_vcf} (generating HTML & CSV summaries)",
+            annotated_vcf,
+            None,
+            None,
+            False
+        ),
         ("run_prokka", ["prokka", "--outdir", prokka_dir, "--prefix", sample, "--cpus", str(args.threads), consensus], "Run Prokka", None, None, None, False),
     ]
 
@@ -452,17 +466,14 @@ def main():
     if (has_eggnog_db and not args.skip_emapper) and (not args.resume or not is_step_complete(step, checkpoint_file)):
         try:
             with open(f"{emapper_out}.emapper.annotations", "r") as f:
-                # Find the last line starting with '#'
                 header_line = None
                 for line in f:
                     if line.startswith("#"):
                         header_line = line.strip()
                     else:
-                        break  # Stop at the first non-comment line to optimize
-                f.seek(0)  # Reset file pointer to start
-                # Define the column indices to extract
+                        break
+                f.seek(0)
                 selected_indices = [0, 6, 7, 8, 9, 11, 12, 13, 14, 15]
-                # Map indices to desired column names for compatibility with assess_pathway_completeness.py
                 header_mapping = {
                     0: "Gene",
                     6: "Description",
@@ -476,14 +487,12 @@ def main():
                     15: "KEGG_rclass"
                 }
                 with open(annot_file, "w") as out:
-                    # Write header with renamed columns
                     if header_line:
                         header_fields = header_line.split("\t")
                         selected_headers = [header_mapping.get(i, header_fields[i].lstrip("#")) for i in selected_indices]
                         out.write("\t".join(selected_headers) + "\n")
                     else:
                         logging.warning("No header line found in eggNOG-mapper annotations file. Writing data without header.")
-                    # Write data rows
                     for line in f:
                         if line.startswith("#"): 
                             continue
@@ -504,6 +513,9 @@ def main():
                 logging.info(f"Removed temporary file: {temp_file}")
 
     logging.info("Pipeline completed successfully.")
+    logging.info(f"SnpEff summary files generated:")
+    logging.info(f"  HTML report: {snpeff_summary_html}")
+    logging.info(f"  CSV stats:   {snpeff_summary_csv}")
 
 if __name__ == "__main__":
     main()
