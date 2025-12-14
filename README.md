@@ -122,7 +122,7 @@ The pipeline is orchestrated by `main.py`, which supports three modes: `metageno
      ├── reference.fasta
      ├── reference.gbk
      ```
-
+  - note: The pipeline takes single sequence fasta files only, check if reference fasta file contains multiple fasta files (genome and plasmid sequences)
 7. **Set Up SnpEff Database**:
    - Configure organism-specific SnpEff databases (refer to SnpEff documentation).
 
