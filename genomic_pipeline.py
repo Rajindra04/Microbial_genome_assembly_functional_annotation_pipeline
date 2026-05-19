@@ -1,10 +1,30 @@
 #!/usr/bin/env python3
+"""
+Genomic Pipeline with Quality Control Checkpoints
+Variant calling and annotation pipeline for paired-end reads with comprehensive QC
+
+Integration points:
+- FastQ QC assessment (fastp)
+- Assembly QC evaluation (QUAST)
+- Read mapping statistics verification
+- MultiQC aggregated reports
+"""
+
 import argparse
 import logging
 import os
 import subprocess
 import sys
 from pathlib import Path
+from quality_control import (
+    setup_qc_logging,
+    assess_fastq_quality,
+    check_assembly_quality_quast,
+    calculate_bam_statistics,
+    generate_multiqc_report,
+    validate_assembly_quality,
+    generate_qc_summary_report
+)
 
 def run_command(cmd_list, error_msg, output_file=None, input_file=None, pipe_to=None, binary=False):
     """Run a command, optionally with input file, output file, or piped command, handling binary or text output."""
@@ -338,7 +358,7 @@ def is_step_complete(step, checkpoint_file):
     return step in completed
 
 def main():
-    parser = argparse.ArgumentParser(description="Variant calling and annotation pipeline for paired-end reads")
+    parser = argparse.ArgumentParser(description="Variant calling and annotation pipeline for paired-end reads with Quality Control")
     parser.add_argument("-s", "--sample", required=True, help="Sample name")
     parser.add_argument("-1", "--fastq1", required=True, help="Path to the first paired-end FASTQ file (R1)")
     parser.add_argument("-2", "--fastq2", required=True, help="Path to the second paired-end FASTQ file (R2)")
@@ -352,6 +372,7 @@ def main():
     parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")
     parser.add_argument("--resume", action="store_true", help="Resume from completed steps")
     parser.add_argument("--skip-emapper", action="store_true", help="Skip eggNOG-mapper step if database is unavailable")
+    parser.add_argument("--skip-qc", action="store_true", help="Skip quality control steps")
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO)
@@ -370,6 +391,29 @@ def main():
     index_reference_fasta(reference)
 
     os.makedirs(args.output_dir, exist_ok=True)
+    
+    # ===== QUALITY CONTROL CHECKPOINTS =====
+    if not args.skip_qc:
+        logging.info("=" * 80)
+        logging.info("RUNNING QUALITY CONTROL CHECKPOINTS")
+        logging.info("=" * 80)
+        
+        qc_dir = os.path.join(args.output_dir, "qc_results")
+        os.makedirs(qc_dir, exist_ok=True)
+        
+        # FastQ QC Assessment
+        logging.info("\n[QC-1] Assessing FastQ quality with fastp...")
+        clean_fastq1, clean_fastq2, fastq_qc = assess_fastq_quality(
+            args.fastq1, args.fastq2, qc_dir, args.threads, args.resume
+        )
+        logging.info(f"FastQ QC completed: {fastq_qc}")
+    else:
+        logging.info("Skipping quality control steps (--skip-qc flag set)")
+        qc_dir = None
+        fastq_qc = {}
+        assembly_metrics = {}
+        mapping_stats = {}
+
     snpeff_config, snpeff_data_dir = create_snpeff_config(args.output_dir, args.snpeff_db, reference)
 
     sample = args.sample
@@ -506,16 +550,60 @@ def main():
     else:
         logging.info(f"Skipping completed or disabled step: {step}")
 
+    # ===== POST-PIPELINE QUALITY CONTROL =====
+    if not args.skip_qc and qc_dir:
+        logging.info("\n" + "=" * 80)
+        logging.info("POST-PIPELINE QUALITY CONTROL AND REPORT GENERATION")
+        logging.info("=" * 80)
+        
+        # Assembly QC (consensus sequence)
+        if os.path.exists(consensus):
+            logging.info("\n[QC-2] Assessing assembly quality with QUAST...")
+            assembly_metrics = check_assembly_quality_quast(
+                consensus, reference, qc_dir, args.threads, args.resume
+            )
+            
+            # Validate assembly quality
+            assembly_validation = validate_assembly_quality(assembly_metrics)
+            logging.info(f"Assembly validation result: {assembly_validation}")
+        
+        # Mapping statistics
+        if os.path.exists(bam):
+            logging.info("\n[QC-3] Calculating read mapping statistics...")
+            mapping_stats = calculate_bam_statistics(bam, qc_dir, prefix="genomic")
+        
+        # Generate comprehensive summary report
+        logging.info("\n[QC-4] Generating comprehensive QC summary report...")
+        summary_report = os.path.join(qc_dir, "qc_summary_report.txt")
+        generate_qc_summary_report(
+            fastq_qc, assembly_metrics, mapping_stats, summary_report, assembly_validation
+        )
+        
+        # Generate MultiQC report
+        logging.info("\n[QC-5] Generating MultiQC aggregated report...")
+        multiqc_report = generate_multiqc_report(
+            qc_dir, qc_dir, project_name=f"{sample}_Genomic_Pipeline", resume=args.resume
+        )
+        logging.info(f"MultiQC report generated: {multiqc_report}")
+
     if not args.keep_temp:
         for temp_file in [paired_fastq1, paired_fastq2, sorted_fastq1, sorted_fastq2, sam]:
             if os.path.exists(temp_file):
                 os.remove(temp_file)
                 logging.info(f"Removed temporary file: {temp_file}")
 
-    logging.info("Pipeline completed successfully.")
+    logging.info("\n" + "=" * 80)
+    logging.info("PIPELINE COMPLETED SUCCESSFULLY")
+    logging.info("=" * 80)
     logging.info(f"SnpEff summary files generated:")
     logging.info(f"  HTML report: {snpeff_summary_html}")
     logging.info(f"  CSV stats:   {snpeff_summary_csv}")
+    
+    if not args.skip_qc and qc_dir:
+        logging.info(f"\nQuality Control reports:")
+        logging.info(f"  Summary report: {summary_report}")
+        if os.path.exists(multiqc_report):
+            logging.info(f"  MultiQC report: {multiqc_report}")
 
 if __name__ == "__main__":
     main()
