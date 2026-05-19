@@ -18,6 +18,8 @@ dependencies:
   - snpeff=5.1
   - prokka=1.14.6
   - eggnog-mapper=2.1.9
+  - quast=5.2.0
+  - multiqc=1.25
   - r-base=4.2.3
   - rpy2=3.5.11
   - pip
